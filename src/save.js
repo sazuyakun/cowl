@@ -1,9 +1,10 @@
-// Save a PNG. In dev it goes straight to the dev server's captures/ folder
+// Save a file. In dev it goes straight to the dev server's captures/ folder
 // (no download prompts, works for long frame sequences); on the site it downloads.
-export async function savePng(blob, name) {
+export async function saveFile(blob, name, dir = '') {
   if (import.meta.env.DEV) {
-    await fetch(`/__save?name=${encodeURIComponent(name)}`, { method: 'POST', body: blob })
-    console.log('saved captures/' + name)
+    const query = new URLSearchParams({ name, dir })
+    const response = await fetch(`/__save?${query}`, { method: 'POST', body: blob })
+    if (!response.ok) throw new Error(`save failed: ${name}`)
     return
   }
   const link = document.createElement('a')
@@ -13,22 +14,27 @@ export async function savePng(blob, name) {
   setTimeout(() => URL.revokeObjectURL(link.href), 1000)
 }
 
-const toBlob = (canvas) => new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+export const toBlob = (canvas) => new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
 
-// Save a frame at the camera's full resolution, mirrored like the screen.
+// Save a frame at the video's full resolution.
 // withVideo: false keeps only the drawn layers, on a transparent background.
-export async function saveFrame(video, layers, { withVideo = true } = {}) {
+// mirror: true matches the selfie view on screen (live); false for recorded clips.
+export async function saveFrame(video, layers, { withVideo = true, mirror = true, name, dir } = {}) {
   const canvas = document.createElement('canvas')
   canvas.width = video.videoWidth
   canvas.height = video.videoHeight
   const ctx = canvas.getContext('2d')
-  ctx.translate(canvas.width, 0)
-  ctx.scale(-1, 1)
+  if (mirror) {
+    ctx.translate(canvas.width, 0)
+    ctx.scale(-1, 1)
+  }
+  // everything is drawn now, before any await, so the caller can change layers right after
   if (withVideo) ctx.drawImage(video, 0, 0)
   for (const layer of layers) ctx.drawImage(layer, 0, 0)
-  await savePng(await toBlob(canvas), `cowl-${withVideo ? 'frame' : 'overlay'}-${Date.now()}.png`)
+  const fileName = name ? `${name}.png` : `cowl-${withVideo ? 'frame' : 'overlay'}-${Date.now()}.png`
+  await saveFile(await toBlob(canvas), fileName, dir)
 }
 
 export async function saveCanvas(canvas, name) {
-  await savePng(await toBlob(canvas), name)
+  await saveFile(await toBlob(canvas), name)
 }

@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
+import { makeStandInCowl } from './cowl.js'
 
 // The matrix is computed for a virtual camera (from MediaPipe's source):
 // at the origin, looking down -z, 63° vertical field of view, units in cm.
@@ -24,12 +25,45 @@ export async function createHeadScene(canvas, width, height) {
   pose.matrixAutoUpdate = false
   scene.add(pose)
 
+  // light for the cowl: soft from above, a key from the front-left
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x222233, 1.4))
+  const key = new THREE.DirectionalLight(0xffffff, 2)
+  key.position.set(-30, 40, 60)
+  scene.add(key)
+
   const face = await loadStandardFace()
   const axes = makeAxes(6)
   axes.position.copy(NOSE_TIP)
-  pose.add(face, axes)
+  const occluder = await makeOccluder()
+  const slot = new THREE.Group() // holds the cowl, so it can be swapped
+  slot.add(makeStandInCowl())
+  pose.add(occluder, face, axes, slot)
 
-  return { pose, face, axes, render: () => renderer.render(scene, camera) }
+  // step 3: a real cowl replaces the stand-in, fitted to the standard face
+  function setCowl(object) {
+    slot.clear()
+    slot.add(object)
+  }
+
+  return {
+    pose, face, axes, cowl: slot, setCowl,
+    render: () => renderer.render(scene, camera),
+  }
+}
+
+// An invisible head: it writes depth but no colour, so the parts of the cowl
+// behind your head (its inside, its back) are hidden, as if your head were real.
+async function makeOccluder() {
+  const material = new THREE.MeshBasicMaterial({ colorWrite: false })
+  const head = new THREE.Group()
+  const face = await loadStandardFace()
+  face.traverse((child) => { if (child.isMesh) child.material = material })
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), material)
+  skull.scale.set(7.4, 9.5, 8.5)
+  skull.position.set(0, 1.5, -3.5)
+  head.add(face, skull)
+  head.traverse((child) => { child.renderOrder = -1 }) // depth first, then the cowl
+  return head
 }
 
 // Google's canonical face: the standard 3D face the matrix turns onto yours
