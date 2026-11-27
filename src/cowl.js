@@ -28,11 +28,51 @@ export function makeStandInCowl() {
   return cowl
 }
 
+// Where a real cowl sits on the standard face, in cm. Set once by eye in the viewer.
+export const FIT = {
+  turn: 0,      // degrees around the vertical axis, if the model doesn't face +z
+  width: 19,    // the cowl's full width (the face is 15.5 cm wide)
+  bottom: -9,   // its lowest point, at the chin line (chin is at -9.4)
+  front: 8.6,   // its most forward point, just in front of the nose bridge
+}
+
+// Scale and place any cowl on the standard face, from its bounding box.
+export function fitToHead(model, fit = FIT) {
+  const holder = new THREE.Group()
+  model.rotation.y = THREE.MathUtils.degToRad(fit.turn)
+  holder.add(model)
+  holder.updateMatrixWorld(true)
+  let box = new THREE.Box3().setFromObject(model)
+  model.scale.multiplyScalar(fit.width / (box.max.x - box.min.x))
+  holder.updateMatrixWorld(true)
+  box = new THREE.Box3().setFromObject(model)
+  const center = box.getCenter(new THREE.Vector3())
+  model.position.x -= center.x
+  model.position.y += fit.bottom - box.min.y
+  model.position.z += fit.front - box.max.z
+  return holder
+}
+
+// matte black with a little sheen, for an untextured model
+const paint = new THREE.MeshStandardMaterial({ color: 0x15161b, roughness: 0.5, metalness: 0.15 })
+
 // a real cowl: any .glb, from a URL or from a dropped file
 export async function loadCowl(source) {
   const loader = new GLTFLoader()
   const gltf = typeof source === 'string'
     ? await loader.loadAsync(source)
     : await loader.parseAsync(await source.arrayBuffer(), '')
-  return gltf.scene
+  gltf.scene.traverse((child) => {
+    if (child.isMesh && !child.material.map) child.material = paint
+  })
+  return fitToHead(gltf.scene)
+}
+
+// the picked cowl if it's on the site, else the stand-in
+export async function loadDefaultCowl() {
+  try {
+    return await loadCowl('/cowl.glb')
+  } catch {
+    return makeStandInCowl()
+  }
 }

@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
-import { makeStandInCowl, loadCowl } from './cowl.js'
+import { loadDefaultCowl, loadCowl } from './cowl.js'
 import { loadStandardFace } from './head.js'
 import { saveCanvas } from './save.js'
 
@@ -29,7 +29,7 @@ scene.add(key, rim)
 const face = await loadStandardFace()
 scene.add(face)
 
-let cowl = makeStandInCowl()
+let cowl = await loadDefaultCowl()
 scene.add(cowl)
 
 async function swapCowl(source) {

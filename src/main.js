@@ -24,7 +24,7 @@ async function startCamera() {
 }
 
 const [, landmarker] = await Promise.all([startCamera(), loadLandmarker()])
-const { pose, face, axes, cowl, render } = await createHeadScene(threeCanvas, video.videoWidth, video.videoHeight)
+const { pose, face, axes, cowl, fitFace, showHead, render } = await createHeadScene(threeCanvas, video.videoWidth, video.videoHeight)
 const smoother = new PoseSmoother()
 
 // what's shown: the finished filter by default; the steps can be switched on
@@ -35,13 +35,14 @@ function applyShow() {
   face.visible = show.face
   axes.visible = show.axes
   cowl.visible = show.cowl
+  showHead(Boolean(show.head))
 }
 applyShow()
 
-// keys: 1 points · 2 standard face · 3 axes · 4 cowl · m raw/smooth
+// keys: 1 points · 2 standard face · 3 axes · 4 cowl · m raw/smooth · o show the invisible head
 //       s save frame · shift+s save overlay only · c save the capture set
 addEventListener('keydown', (e) => {
-  const toggles = { 1: 'points', 2: 'face', 3: 'axes', 4: 'cowl', m: 'smooth' }
+  const toggles = { 1: 'points', 2: 'face', 3: 'axes', 4: 'cowl', m: 'smooth', o: 'head' }
   if (toggles[e.key]) {
     show[toggles[e.key]] = !show[toggles[e.key]]
     if (e.key === 'm') console.log(show.smooth ? 'smooth' : 'raw')
@@ -92,6 +93,7 @@ function loop() {
       // step 3½: smooth it (step 3, the cowl, sits inside pose)
       const steady = smoother.filter(matrix.data, performance.now() / 1000)
       pose.matrix.fromArray(show.smooth ? steady : matrix.data)
+      fitFace(points, matrix.data) // the invisible face takes your real face's shape
     }
     pose.visible = Boolean(matrix)
     render()

@@ -39,3 +39,6 @@ dist-ssr
 
 # frames saved from the dev server
 captures/
+
+# the shrunk, credited cowl ships with the site (CC BY, see README)
+!public/cowl.glb

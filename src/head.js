@@ -1,6 +1,5 @@
 import * as THREE from 'three'
-import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
-import { makeStandInCowl } from './cowl.js'
+import { loadDefaultCowl } from './cowl.js'
 
 // The matrix is computed for a virtual camera (from MediaPipe's source):
 // at the origin, looking down -z, 63° vertical field of view, units in cm.
@@ -31,13 +30,14 @@ export async function createHeadScene(canvas, width, height) {
   key.position.set(-30, 40, 60)
   scene.add(key)
 
-  const face = await loadStandardFace()
+  const canonical = await loadCanonical()
+  const face = makeStandardFace(canonical)
   const axes = makeAxes(6)
   axes.position.copy(NOSE_TIP)
-  const occluder = await makeOccluder()
+  const head = makeInvisibleHead(canonical)
   const slot = new THREE.Group() // holds the cowl, so it can be swapped
-  slot.add(makeStandInCowl())
-  pose.add(occluder, face, axes, slot)
+  slot.add(await loadDefaultCowl())
+  pose.add(head.group, face, axes, slot)
 
   // step 3: a real cowl replaces the stand-in, fitted to the standard face
   function setCowl(object) {
@@ -45,35 +45,97 @@ export async function createHeadScene(canvas, width, height) {
     slot.add(object)
   }
 
+  // Every frame, rebuild the invisible face from your real points, so it has
+  // your face's shape (and your jaw when you talk), not the standard one.
+  // Each point is put on its camera ray, at the depth the matrix gives that
+  // point on the standard face, then moved into the head's own space.
+  const tanHalf = Math.tan(THREE.MathUtils.degToRad(FOV / 2))
+  const aspect = width / height
+  const matrix = new THREE.Matrix4()
+  const toHead = new THREE.Matrix4()
+  const v = new THREE.Vector3()
+  const inward = new THREE.Vector3()
+  function fitFace(points, matrixData) {
+    if (!points || !matrixData) return
+    matrix.fromArray(matrixData)
+    toHead.copy(pose.matrix).invert()
+    const position = head.face.geometry.attributes.position
+    for (let i = 0; i < position.count; i++) {
+      v.fromArray(canonical.positions, i * 3).applyMatrix4(matrix)
+      const depth = -v.z
+      const p = points[i]
+      v.set((2 * p.x - 1) * tanHalf * aspect * depth, (1 - 2 * p.y) * tanHalf * depth, -depth)
+      v.applyMatrix4(toHead)
+      // 4 mm under the skin, so cowl parts resting on the face still show
+      inward.copy(v).sub(HEAD_CENTER).normalize()
+      v.addScaledVector(inward, -0.4)
+      position.setXYZ(i, v.x, v.y, v.z)
+    }
+    position.needsUpdate = true
+  }
+
+  // debug: tint the invisible head so you can see it hug your face
+  function showHead(on) {
+    head.material.colorWrite = on
+    head.material.transparent = on
+  }
+
   return {
-    pose, face, axes, cowl: slot, setCowl,
+    pose, face, axes, cowl: slot, setCowl, fitFace, showHead,
     render: () => renderer.render(scene, camera),
   }
 }
 
-// An invisible head: it writes depth but no colour, so the parts of the cowl
-// behind your head (its inside, its back) are hidden, as if your head were real.
-async function makeOccluder() {
-  const material = new THREE.MeshBasicMaterial({ colorWrite: false })
-  const head = new THREE.Group()
-  const face = await loadStandardFace()
-  face.traverse((child) => { if (child.isMesh) child.material = material })
+const HEAD_CENTER = new THREE.Vector3(0, 1.5, -3.5)
+
+// An invisible head: it writes depth but no colour, so every part of the cowl
+// behind your head (its inside, its lining, its back) is hidden, and only the
+// outside shows, around your real face, as if you were wearing it.
+function makeInvisibleHead(canonical) {
+  const material = new THREE.MeshBasicMaterial({
+    colorWrite: false, side: THREE.DoubleSide, color: 0xff2bd6, opacity: 0.45,
+  })
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(canonical.positions.slice(), 3))
+  geometry.setIndex(canonical.index)
+  const face = new THREE.Mesh(geometry, material) // your face, updated every frame
+  face.frustumCulled = false
   const skull = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), material)
   skull.scale.set(7.4, 9.5, 8.5)
-  skull.position.set(0, 1.5, -3.5)
-  head.add(face, skull)
-  head.traverse((child) => { child.renderOrder = -1 }) // depth first, then the cowl
-  return head
+  skull.position.copy(HEAD_CENTER)
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 6, 16, 32), material)
+  neck.position.set(0, -12, -4.5)
+  const group = new THREE.Group()
+  group.add(face, skull, neck)
+  group.traverse((child) => { child.renderOrder = -1 }) // depth first, then the cowl
+  return { group, face, material }
 }
 
-// Google's canonical face: the standard 3D face the matrix turns onto yours
-export async function loadStandardFace() {
-  const obj = await new OBJLoader().loadAsync('/canonical_face_model.obj')
-  const material = new THREE.MeshBasicMaterial({
+// Google's canonical face, read straight from its .obj: vertex i is landmark i
+export async function loadCanonical() {
+  const text = await (await fetch('/canonical_face_model.obj')).text()
+  const positions = []
+  const index = []
+  for (const line of text.split('\n')) {
+    const [kind, ...rest] = line.trim().split(/\s+/)
+    if (kind === 'v') positions.push(...rest.slice(0, 3).map(Number))
+    if (kind === 'f') index.push(...rest.map((corner) => parseInt(corner, 10) - 1))
+  }
+  return { positions: new Float32Array(positions), index }
+}
+
+// the standard 3D face the matrix turns onto yours, as a wireframe
+function makeStandardFace(canonical) {
+  const geometry = new THREE.BufferGeometry()
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(canonical.positions, 3))
+  geometry.setIndex(canonical.index)
+  return new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({
     color: 0xffffff, wireframe: true, transparent: true, opacity: 0.35,
-  })
-  obj.traverse((child) => { if (child.isMesh) child.material = material })
-  return obj
+  }))
+}
+
+export async function loadStandardFace() {
+  return makeStandardFace(await loadCanonical())
 }
 
 // red = x (sideways), green = y (up), blue = z (out of the face)

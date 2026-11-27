@@ -56,8 +56,9 @@ async function run(url, fileName) {
 
   // a fresh tracker and filter per clip: timestamps start again at 0
   const landmarker = await loadLandmarker()
-  const { pose, face, axes, render } = await createHeadScene($('three'), width, height)
+  const { pose, face, axes, fitFace, showHead, render } = await createHeadScene($('three'), width, height)
   face.visible = axes.visible = false
+  showHead(params.get('head') === '1') // debug: tint the invisible head
   const smoother = new PoseSmoother()
   const data = { clip: name, fps, width, height, frames: [] }
   const started = performance.now()
@@ -84,7 +85,10 @@ async function run(url, fileName) {
     for (const mode of ['raw', 'smooth']) {
       if (!want[mode]) continue
       pose.visible = Boolean(raw)
-      if (raw) pose.matrix.fromArray(mode === 'raw' ? raw : smooth)
+      if (raw) {
+        pose.matrix.fromArray(mode === 'raw' ? raw : smooth)
+        fitFace(points, raw)
+      }
       render()
       exports.push(saveFrame(video, [$('three')], { withVideo: false, mirror: false, name: `${name}-cowl-${mode}-${pad(i)}`, dir: name }))
     }
