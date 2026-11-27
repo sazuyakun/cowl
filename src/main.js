@@ -54,12 +54,13 @@ function loop() {
   if (video.currentTime !== lastTime) {
     lastTime = video.currentTime
     const result = landmarker.detectForVideo(video, performance.now())
-    drawPoints(result.faceLandmarks[0])
+    const points = result.faceLandmarks[0] // 478 points
+    drawPoints(points)
 
     // look at the matrix once, so we know its shape before step 2
     const matrix = result.facialTransformationMatrixes[0]
     if (matrix && !loggedMatrix) {
-      console.log('points:', result.faceLandmarks[0].length, 'matrix:', matrix)
+      console.log('points:', points.length, 'matrix:', JSON.stringify(matrix))
       loggedMatrix = true
     }
   }
