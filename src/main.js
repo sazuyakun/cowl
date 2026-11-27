@@ -1,5 +1,7 @@
 import './style.css'
 import { FilesetResolver, FaceLandmarker } from '@mediapipe/tasks-vision'
+import { createHeadScene } from './head.js'
+import { saveFrame } from './save.js'
 
 // pinned: the wasm on the CDN must match the npm version in package.json
 const WASM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm'
@@ -7,6 +9,7 @@ const MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/f
 
 const video = document.querySelector('#cam')
 const canvas = document.querySelector('#overlay')
+const threeCanvas = document.querySelector('#three')
 const ctx = canvas.getContext('2d')
 
 async function startCamera() {
@@ -45,9 +48,19 @@ function drawPoints(points) {
 }
 
 const [, landmarker] = await Promise.all([startCamera(), loadLandmarker()])
+const { pose, face, axes, render } = await createHeadScene(threeCanvas, video.videoWidth, video.videoHeight)
+
+// keys: 1 points · 2 standard face · 3 axes · s save frame · shift+s save overlay only
+const show = { points: true, face: true, axes: true }
+face.visible = show.face
+addEventListener('keydown', (e) => {
+  if (e.key === '1') show.points = !show.points
+  if (e.key === '2') face.visible = show.face = !show.face
+  if (e.key === '3') axes.visible = show.axes = !show.axes
+  if (e.key.toLowerCase() === 's') saveFrame(video, [canvas, threeCanvas], { withVideo: !e.shiftKey })
+})
 
 let lastTime = -1
-let loggedMatrix = false
 
 function loop() {
   // only run the model when the camera has a new frame
@@ -55,14 +68,13 @@ function loop() {
     lastTime = video.currentTime
     const result = landmarker.detectForVideo(video, performance.now())
     const points = result.faceLandmarks[0] // 478 points
-    drawPoints(points)
+    drawPoints(show.points ? points : null)
 
-    // look at the matrix once, so we know its shape before step 2
+    // step 2: the matrix turns a standard 3D face until it lines up with mine
     const matrix = result.facialTransformationMatrixes[0]
-    if (matrix && !loggedMatrix) {
-      console.log('points:', points.length, 'matrix:', JSON.stringify(matrix))
-      loggedMatrix = true
-    }
+    if (matrix) pose.matrix.fromArray(matrix.data)
+    pose.visible = Boolean(matrix)
+    render()
   }
   requestAnimationFrame(loop)
 }
