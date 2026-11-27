@@ -33,6 +33,8 @@ function saveCaptures() {
 // three pages: the live camera (index), the 3D viewer, and offline (recorded clips)
 export default defineConfig({
   plugins: [saveCaptures()],
+  // `npm run preview` behind a temporary Cloudflare tunnel, to try it on a phone
+  preview: { allowedHosts: ['.trycloudflare.com'] },
   build: {
     rollupOptions: {
       input: {
