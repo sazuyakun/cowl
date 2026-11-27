@@ -36,3 +36,6 @@ dist-ssr
 *.mov
 
 *.webm
+
+# frames saved from the dev server
+captures/

@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { makeStandInCowl, loadCowl } from './cowl.js'
 import { loadStandardFace } from './head.js'
+import { saveCanvas } from './save.js'
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true })
 renderer.setPixelRatio(devicePixelRatio)
@@ -54,16 +55,10 @@ addEventListener('keydown', (e) => {
   if (e.key === 's') saveStill(2000)
 })
 
-function saveStill(heightPx) {
+async function saveStill(heightPx) {
   renderer.setPixelRatio(heightPx / innerHeight)
   renderer.render(scene, camera)
-  renderer.domElement.toBlob((blob) => {
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `cowl-still-${Date.now()}.png`
-    link.click()
-    setTimeout(() => URL.revokeObjectURL(link.href), 1000)
-  }, 'image/png')
+  await saveCanvas(renderer.domElement, `cowl-still-${Date.now()}.png`)
   renderer.setPixelRatio(devicePixelRatio)
 }
 
