@@ -1,0 +1,9 @@
+node_modules
+dist
+*.glb
+*.gltf
+*.task
+*.mp4
+*.mov
+*.webm
+.DS_Store
