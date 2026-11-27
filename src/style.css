@@ -9,3 +9,12 @@ html, body { margin: 0; height: 100%; background: #000; }
   object-fit: cover;
   transform: scaleX(-1); /* mirror, like a selfie camera */
 }
+
+/* the cowl's licence needs a credit on the page */
+#credit {
+  position: fixed; left: 0; right: 0; bottom: 0; margin: 0;
+  padding: 8px max(12px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  font: 11px/1.4 system-ui, sans-serif; color: rgba(255, 255, 255, 0.7); text-align: center;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+}
+#credit a { color: inherit; }

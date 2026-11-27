@@ -2,6 +2,7 @@ import './style.css'
 import { loadLandmarker, drawPoints } from './landmarker.js'
 import { createHeadScene } from './head.js'
 import { PoseSmoother } from './smooth.js'
+import { createLightProbe } from './light.js'
 import { saveFrame } from './save.js'
 
 const video = document.querySelector('#cam')
@@ -24,8 +25,9 @@ async function startCamera() {
 }
 
 const [, landmarker] = await Promise.all([startCamera(), loadLandmarker()])
-const { pose, face, axes, cowl, fitFace, showHead, render } = await createHeadScene(threeCanvas, video.videoWidth, video.videoHeight)
+const { pose, face, axes, cowl, fitFace, showHead, matchLight, render } = await createHeadScene(threeCanvas, video.videoWidth, video.videoHeight)
 const smoother = new PoseSmoother()
+const measureLight = createLightProbe()
 
 // what's shown: the finished filter by default; the steps can be switched on
 const show = { points: false, face: false, axes: false, cowl: true, smooth: true }
@@ -94,6 +96,7 @@ function loop() {
       const steady = smoother.filter(matrix.data, performance.now() / 1000)
       pose.matrix.fromArray(show.smooth ? steady : matrix.data)
       fitFace(points, matrix.data) // the invisible face takes your real face's shape
+      matchLight(measureLight(video, points)) // the cowl takes the light on your face
     }
     pose.visible = Boolean(matrix)
     render()

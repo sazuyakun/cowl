@@ -24,11 +24,27 @@ export async function createHeadScene(canvas, width, height) {
   pose.matrixAutoUpdate = false
   scene.add(pose)
 
-  // light for the cowl: soft from above, a key from the front-left
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x222233, 1.4))
+  // light for the cowl: soft from above, plus a key light from the front.
+  // matchLight() turns both to the light measured on your face each frame.
+  const ambient = new THREE.HemisphereLight(0xffffff, 0x222233, 1.4)
   const key = new THREE.DirectionalLight(0xffffff, 2)
   key.position.set(-30, 40, 60)
-  scene.add(key)
+  scene.add(ambient, key)
+
+  function matchLight(light) {
+    if (!light) return
+    const [r, g, b] = light.color
+    const strongest = Math.max(r, g, b, 1e-3)
+    const tint = new THREE.Color(r / strongest, g / strongest, b / strongest)
+    // keep the tint gentle: halfway between white and the face's light colour
+    tint.lerp(new THREE.Color(1, 1, 1), 0.5)
+    ambient.color.copy(tint)
+    ambient.intensity = 1.4 * light.level
+    key.color.copy(tint)
+    key.intensity = 2 * light.level * (0.6 + Math.min(1, Math.abs(light.side) * 4))
+    // the key comes from the brighter side of your face (camera space: x right, y up)
+    key.position.set(light.side * 120, 30 + light.up * 80, 60)
+  }
 
   const canonical = await loadCanonical()
   const face = makeStandardFace(canonical)
@@ -81,7 +97,7 @@ export async function createHeadScene(canvas, width, height) {
   }
 
   return {
-    pose, face, axes, cowl: slot, setCowl, fitFace, showHead,
+    pose, face, axes, cowl: slot, setCowl, fitFace, showHead, matchLight,
     render: () => renderer.render(scene, camera),
   }
 }

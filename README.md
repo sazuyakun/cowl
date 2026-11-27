@@ -35,10 +35,29 @@ pose.matrix.fromArray(matrix.data)
 **The 3D viewer** (`/viewer.html`): spin, zoom and orbit the cowl with the mouse, next to the standard face for scale. Drop any `.glb` on it to load a different model.
 
 ## Step 3: put the cowl on
-*Coming.*
+Tag: [`step-3-put-the-cowl-on`](https://github.com/sazuyakun/cowl/tree/step-3-put-the-cowl-on)
+
+The cowl goes inside the same `pose` group, so it takes the same turn as your head, every frame.
+
+```js
+const steady = smoother.filter(matrix.data, performance.now() / 1000)
+pose.matrix.fromArray(show.smooth ? steady : matrix.data)
+fitFace(points, matrix.data)
+```
+
+Three things make it look worn, not pasted on:
+- **An invisible head.** It writes depth but no colour, so the cowl's inside, lining and back are hidden behind it. Its face is rebuilt from your 478 points every frame (each point placed on its camera ray at the depth the matrix gives it), so it has your face's shape and moves with your jaw. A skull and a neck fill in the rest. Press `O` to see it.
+- **A fit.** Any `.glb` is scaled and placed on the standard face from its bounding box (`FIT` in `src/cowl.js`): 19 cm wide, bottom at the chin line, front just ahead of the nose bridge.
+- **Your light.** Each frame the middle of your face is shrunk to 24×24 pixels and measured: how bright, what colour, which side is brighter. The cowl's lights follow (`src/light.js`).
 
 ## Step 3½: smooth it
-*Coming.*
+Tag: [`step-3.5-smooth-it`](https://github.com/sazuyakun/cowl/tree/step-3.5-smooth-it)
+
+Every frame the points are guessed fresh, and every guess is a tiny bit off, so the raw cowl shakes. The fix is the [1 Euro filter](https://gery.casiez.net/1euro/) (Casiez, Roussel & Vogel, 2012): a low-pass filter whose cutoff rises with speed. Moving slowly, it smooths a lot (no jitter); moving fast, it smooths a little (no lag). It runs on the head's position and rotation (`src/smooth.js`). Press `M` to switch between raw and smooth.
+
+```js
+const steady = smoother.filter(matrix.data, performance.now() / 1000)
+```
 
 ## Run it
 ```bash
@@ -47,9 +66,15 @@ npm run dev
 ```
 Open the local link and allow the camera. The camera only works on `localhost` or HTTPS.
 
-Keys on the camera page: `1` points · `2` standard face · `3` axes · `S` save the frame as a PNG · `Shift+S` save only the overlay, on a transparent background.
-Keys in the viewer: `F` standard face · `S` save a transparent PNG, 2000 px tall.
+Keys on the camera page: `1` points · `2` standard face · `3` axes · `4` cowl · `M` raw/smooth · `O` show the invisible head · `S` save the frame as a PNG · `Shift+S` save only the overlay, on a transparent background · `C` save every layer at once.
+Keys in the viewer (`/viewer.html`): drag to spin · `V` next view · `F` standard face · `S` save a transparent PNG, 2000 px tall. Drop any `.glb` on it to try another cowl.
 
-## Licence
-Code: MIT. The 3D model keeps its own licence, credited on the page.
+**Recorded clips** (`/offline.html`): pick an H.264 clip and its frame rate. It steps through the clip one frame at a time and saves `<clip>.json` (per frame: the 478 points and the raw and smooth matrices) plus transparent PNG sequences of the cowl, raw and smooth, ready to lay over the clip. In `npm run dev`, saves go straight to `captures/`.
+
+**A new cowl:** `npm run shrink -- big.glb public/cowl.glb 60000` cuts it to 60k faces for phones.
+
+## Credits and licence
+Code: MIT.
+The cowl: ["Batman Cowl (The Dark Knight)"](https://sketchfab.com/3d-models/batman-cowl-the-dark-knight-1fb9c5d3f4604ba19e4684459bd38a9d) by [Fr3akShow](https://sketchfab.com/Fr3akShow), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes: simplified from 708k to 60k faces and repainted (`public/cowl.glb`).
+Batman is a DC character; this is a fan-made demo, not affiliated with DC.
 `public/canonical_face_model.obj` is from [Google's MediaPipe](https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/modules/face_geometry/data/canonical_face_model.obj) (Apache 2.0).

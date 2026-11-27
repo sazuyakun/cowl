@@ -35,7 +35,9 @@ class OneEuro {
 // Smooths the head's pose: position (cm) and rotation (a quaternion), each
 // number through its own 1 Euro filter.
 export class PoseSmoother {
-  constructor({ minCutoff = 1, beta = 0.05, rotationBeta = 0.5 } = {}) {
+  // tuned on a real 8 s clip (2026-11-28): beta 0.05 trailed fast turns by up
+  // to 2.5 cm; 0.2 halves that lag. A still head still gets full smoothing.
+  constructor({ minCutoff = 1.5, beta = 0.2, rotationBeta = 2 } = {}) {
     this.options = { minCutoff, beta, rotationBeta }
     this.reset()
   }

@@ -4,6 +4,7 @@
 import { loadLandmarker, drawPoints } from './landmarker.js'
 import { createHeadScene } from './head.js'
 import { PoseSmoother } from './smooth.js'
+import { createLightProbe } from './light.js'
 import { saveFile, saveFrame } from './save.js'
 
 const $ = (id) => document.getElementById(id)
@@ -56,7 +57,8 @@ async function run(url, fileName) {
 
   // a fresh tracker and filter per clip: timestamps start again at 0
   const landmarker = await loadLandmarker()
-  const { pose, face, axes, fitFace, showHead, render } = await createHeadScene($('three'), width, height)
+  const { pose, face, axes, fitFace, showHead, matchLight, render } = await createHeadScene($('three'), width, height)
+  const measureLight = createLightProbe()
   face.visible = axes.visible = false
   showHead(params.get('head') === '1') // debug: tint the invisible head
   const smoother = new PoseSmoother()
@@ -69,6 +71,7 @@ async function run(url, fileName) {
     const points = result.faceLandmarks[0]
     const raw = result.facialTransformationMatrixes[0]?.data ?? null
     const smooth = raw ? smoother.filter(raw, i / fps) : null
+    matchLight(measureLight(video, points))
 
     data.frames.push({
       i,
