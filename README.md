@@ -20,7 +20,19 @@ drawPoints(points)
 Each point's x and y go from 0 to 1, so `x * canvas.width` is its pixel. The video and the canvas are mirrored and cropped the same way, so the points land on your face.
 
 ## Step 2: find where it's facing
-*Coming next.*
+Tag: [`step-2-find-where-its-facing`](https://github.com/sazuyakun/cowl/tree/step-2-find-where-its-facing)
+
+Google keeps a **standard 3D face** (the canonical face, in centimetres). Every frame, the model also returns a 4×4 matrix: the move and turn that lines that standard face up with yours. That turn *is* your head's direction.
+
+```js
+outputFacialTransformationMatrixes: true,
+const matrix = result.facialTransformationMatrixes[0]
+pose.matrix.fromArray(matrix.data)
+```
+
+`pose` is a three.js group. Anything inside it (the standard face as a wireframe, red/green/blue axes from the nose tip) moves with your head. It lines up because three.js renders with the same virtual camera MediaPipe assumes: at the origin, looking down −z, with a 63° vertical field of view. The matrix's 16 numbers are column-major, which is what `fromArray` expects.
+
+**The 3D viewer** (`/viewer.html`): spin, zoom and orbit the cowl with the mouse, next to the standard face for scale. Drop any `.glb` on it to load a different model.
 
 ## Step 3: put the cowl on
 *Coming.*
@@ -35,5 +47,9 @@ npm run dev
 ```
 Open the local link and allow the camera. The camera only works on `localhost` or HTTPS.
 
+Keys on the camera page: `1` points · `2` standard face · `3` axes · `S` save the frame as a PNG · `Shift+S` save only the overlay, on a transparent background.
+Keys in the viewer: `F` standard face · `S` save a transparent PNG, 2000 px tall.
+
 ## Licence
 Code: MIT. The 3D model keeps its own licence, credited on the page.
+`public/canonical_face_model.obj` is from [Google's MediaPipe](https://github.com/google-ai-edge/mediapipe/blob/master/mediapipe/modules/face_geometry/data/canonical_face_model.obj) (Apache 2.0).

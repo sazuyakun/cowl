@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>cowl · viewer</title>
+    <style>
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #111; }
+      canvas { display: block; touch-action: none; }
+      p {
+        position: fixed; left: 0; right: 0; bottom: 16px; margin: 0;
+        text-align: center; color: #888; font: 13px/1.4 system-ui, sans-serif;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <p>drag to spin · scroll to zoom · drop a .glb · F face · S save</p>
+    <script type="module" src="/src/viewer.js"></script>
+  </body>
+</html>
