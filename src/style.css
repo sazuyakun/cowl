@@ -10,6 +10,15 @@ html, body { margin: 0; height: 100%; background: #000; }
   transform: scaleX(-1); /* mirror, like a selfie camera */
 }
 
+/* what's happening while it loads, or why it can't start */
+#status {
+  position: fixed; inset: 0; margin: 0; display: grid; place-items: center;
+  padding: 24px max(24px, env(safe-area-inset-left, 0px));
+  font: 15px/1.5 system-ui, sans-serif; color: #ddd; text-align: center;
+  pointer-events: none;
+}
+#status[hidden] { display: none; }
+
 /* the cowl's licence needs a credit on the page */
 #credit {
   position: fixed; left: 0; right: 0; bottom: 0; margin: 0;

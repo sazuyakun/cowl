@@ -24,7 +24,13 @@ async function startCamera() {
   canvas.height = video.videoHeight
 }
 
-const [, landmarker] = await Promise.all([startCamera(), loadLandmarker()])
+const status = document.querySelector('#status')
+const [, landmarker] = await Promise.all([startCamera(), loadLandmarker()]).catch((error) => {
+  status.textContent = error.name === 'NotAllowedError'
+    ? 'The camera is blocked. Allow camera access for this page, then reload.'
+    : `Couldn't start: ${error.message}`
+  throw error
+})
 const { pose, face, axes, cowl, fitFace, showHead, matchLight, render } = await createHeadScene(threeCanvas, video.videoWidth, video.videoHeight)
 const smoother = new PoseSmoother()
 const measureLight = createLightProbe()
@@ -104,4 +110,5 @@ function loop() {
   requestAnimationFrame(loop)
 }
 
+status.hidden = true
 loop()
