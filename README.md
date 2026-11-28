@@ -6,10 +6,10 @@ A Batman cowl rendered from code onto your face, live in the browser. Markerless
 
 Built for the "How to become Batman" reel. Each step below is a git tag, so you can open the code exactly as it was at that step.
 
-## Step 1: find the face
+## Step 1: Facial landmark detection (find the face)
 Tag: [`step-1-find-the-face`](https://github.com/sazuyakun/cowl/tree/step-1-find-the-face)
 
-A detector finds the face, then a second model puts **478 points** on it, in 3D (x, y and a relative depth z). It's Google's [MediaPipe Face Landmarker](https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker/web_js), running in your browser on every new camera frame.
+**Facial landmark detection:** a neural network finds the face, then a second one puts **478 points** on it, in 3D (x, y and a relative depth z). It's Google's [MediaPipe Face Landmarker](https://developers.google.com/edge/mediapipe/solutions/vision/face_landmarker/web_js), running in your browser on every new camera frame.
 
 ```js
 const result = landmarker.detectForVideo(video, performance.now())
@@ -67,7 +67,7 @@ npm run dev
 Open the local link and allow the camera. The camera only works on `localhost` or HTTPS.
 
 Keys on the camera page: `1` points · `2` standard face · `3` axes · `4` cowl · `M` raw/smooth · `O` show the invisible head · `S` save the frame as a PNG · `Shift+S` save only the overlay, on a transparent background · `C` save every layer at once.
-Keys in the viewer (`/viewer.html`): drag to spin · `V` next view · `F` standard face · `S` save a transparent PNG, 2000 px tall. Drop any `.glb` on it to try another cowl.
+Keys in the viewer (`/viewer.html`): drag to spin · `V` next view · `F` standard face · `S` save a transparent PNG, 2160 px tall. Drop any `.glb` on it to try another cowl.
 
 **Recorded clips** (`/offline.html`): pick an H.264 clip and its frame rate. It steps through the clip one frame at a time and saves `<clip>.json` (per frame: the 478 points and the raw and smooth matrices) plus transparent PNG sequences of the cowl, raw and smooth, ready to lay over the clip. In `npm run dev`, saves go straight to `captures/`.
 

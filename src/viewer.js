@@ -65,7 +65,7 @@ addEventListener('drop', (e) => {
 // ?face=0 hides the standard face (for clean stills)
 if (params.get('face') === '0') face.visible = false
 
-// keys: f standard face · v next view · s save a transparent PNG, 2000 px tall
+// keys: f standard face · v next view · s save a transparent PNG, 2160 px tall
 addEventListener('keydown', (e) => {
   if (e.key === 'f') face.visible = !face.visible
   if (e.key === 'v') {
@@ -73,7 +73,7 @@ addEventListener('keydown', (e) => {
     view = names[(names.indexOf(view) + 1) % names.length]
     setView(view)
   }
-  if (e.key === 's') saveStill(2000)
+  if (e.key === 's') saveStill(2160)
 })
 
 async function saveStill(heightPx) {
